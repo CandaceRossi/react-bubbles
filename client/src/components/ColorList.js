@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import axios from "axios";
+import axiosWithAuth from "../utils/axiosWithAuth";
 
 const initialColor = {
   color: "",
@@ -9,21 +9,45 @@ const initialColor = {
 const ColorList = ({ colors, updateColors }) => {
   console.log(colors);
   const [editing, setEditing] = useState(false);
-  const [colorToEdit, setColorToEdit] = useState(initialColor);
+  const [colorToEdit, setColorToEdit] = useState(() => {
+    if (updateColors) {
+      return { color: updateColors.color, code: { hex: updateColors.code } };
+    } else {
+      return initialColor;
+    }
+  });
 
   const editColor = color => {
     setEditing(true);
     setColorToEdit(color);
+    axiosWithAuth()
+      .post("/api/colors", color)
+      .then(res => {
+        updateColors(res.data);
+      });
   };
 
   const saveEdit = e => {
     e.preventDefault();
+    axiosWithAuth()
+      .put("/api/colors/:id", colors)
+      .then(res => {
+        setColorToEdit(res.data);
+      });
     // Make a put request to save your updated color
     // think about where will you get the id from...
     // where is is saved right now?
   };
 
   const deleteColor = color => {
+    axiosWithAuth()
+      .delete(`/api/colors/${color}`)
+      .then(res => {
+        console.log("delete", res);
+        setEditing(res.data);
+      })
+      .catch(err => console.log(err.response));
+
     // make a delete request to delete this color
   };
 
@@ -32,14 +56,16 @@ const ColorList = ({ colors, updateColors }) => {
       <p>colors</p>
       <ul>
         {colors.map(color => (
-          <li key={color.color} onClick={() => editColor(color)}>
+          <li key={color.color} onClick={() => editColor(color.color)}>
             <span>
-              <span className="delete" onClick={e => {
-                    e.stopPropagation();
-                    deleteColor(color)
-                  }
-                }>
-                  x
+              <span
+                className="delete"
+                onClick={e => {
+                  e.stopPropagation();
+                  deleteColor(color.color);
+                }}
+              >
+                x
               </span>{" "}
               {color.color}
             </span>
